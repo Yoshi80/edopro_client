@@ -87,6 +87,7 @@ void DeckBuilder::Initialize(bool refresh) {
 	is_lastcard = 0;
 	is_draging = false;
 	prev_deck = mainGame->cbDBDecks->getSelected();
+	prev_deck_editor_alternate_arts = gGameConfig->deck_editor_alternate_arts;
 	prev_operation = 0;
 	mainGame->SetMessageWindow();
 	mainGame->device->setEventReceiver(this);
@@ -589,6 +590,11 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				mainGame->env->setFocus(0);
 				break;
 			}
+			case COMBOBOX_ALTERNATE_ARTS: {
+				gGameConfig->deck_editor_alternate_arts = mainGame->gSettings.cbAlternateArts->getSelected();
+				StartFilter(true);
+				break;
+			}
 			}
 			break;
 		}
@@ -1033,6 +1039,10 @@ bool DeckBuilder::FiltersChanged() {
 	CHECK_AND_SET(filter_scl);
 	CHECK_AND_SET(filter_marks);
 	CHECK_AND_SET(filter_lm);
+	if (gGameConfig->deck_editor_alternate_arts != prev_deck_editor_alternate_arts) {
+		res = true;
+	}
+	prev_deck_editor_alternate_arts = gGameConfig->deck_editor_alternate_arts;
 	return res;
 }
 #undef CHECK_AND_SET
@@ -1159,6 +1169,25 @@ void DeckBuilder::FilterCards(bool force_refresh) {
 	SortList();
 	auto ip = std::unique(results.begin(), results.end());
 	results.resize(std::distance(results.begin(), ip));
+
+	if (gGameConfig->deck_editor_alternate_arts == 1) {
+		std::vector<const CardDataC*> filtered_results;
+		std::set<std::pair<epro::wstringview, uint32_t>> seen;
+		for (const auto* pcard : results) {
+			uint32_t group_ot = pcard->ot;
+			if (group_ot & SCOPE_RUSH) group_ot = SCOPE_RUSH;
+			else if (group_ot & SCOPE_SPEED) group_ot = SCOPE_SPEED;
+			else if (group_ot & (SCOPE_OCG | SCOPE_TCG | SCOPE_PRERELEASE)) group_ot = SCOPE_OCG_TCG;
+
+			auto key = std::make_pair(gDataManager->GetName(pcard->code), group_ot);
+			if (seen.find(key) == seen.end()) {
+				seen.insert(key);
+				filtered_results.push_back(pcard);
+			}
+		}
+		results = std::move(filtered_results);
+	}
+
 	result_string = epro::to_wstring(results.size());
 	scroll_pos = 0;
 	if(results.size() > 7) {

@@ -963,6 +963,12 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 		}
 		case irr::gui::EGET_COMBO_BOX_CHANGED: {
 			switch (id) {
+			case COMBOBOX_ALTERNATE_ARTS: {
+				if (mainGame->is_building && mainGame->deckBuilder.OnEvent(event))
+					break;
+				gGameConfig->deck_editor_alternate_arts = mainGame->gSettings.cbAlternateArts->getSelected();
+				break;
+			}
 			case COMBOBOX_DUEL_RULE: {
 				auto setDeckSizes = [&](const DeckSizes& size) {
 					mainGame->ebMainMin->setText(epro::to_wstring<int>(size.main.min).data());

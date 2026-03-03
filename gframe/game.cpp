@@ -1674,6 +1674,15 @@ void Game::PopulateSettingsWindow() {
 		gSettings.btnReloadSkin = env->addButton(GetNextRect(), sPanel, BUTTON_RELOAD_SKIN, gDataManager->GetSysString(2066).data());
 		defaultStrings.emplace_back(gSettings.btnReloadSkin, 2066);
 		{
+			gSettings.stAlternateArts = env->addStaticText(gDataManager->GetSysString(12126).data(), GetCurrentRectWithXOffset(15, 120), false, true, sPanel);
+			defaultStrings.emplace_back(gSettings.stAlternateArts, 12126);
+			gSettings.cbAlternateArts = AddComboBox(env, GetCurrentRectWithXOffset(125, 200), sPanel, COMBOBOX_ALTERNATE_ARTS);
+			gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1213).data());
+			gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1214).data());
+			gSettings.cbAlternateArts->setSelected(gGameConfig->deck_editor_alternate_arts);
+			IncrementXorY();
+		}
+		{
 			gSettings.stDpiScale = env->addStaticText(gDataManager->GetSysString(2070).data(), GetCurrentRectWithXOffset(15, 90), false, false, sPanel);
 			defaultStrings.emplace_back(gSettings.stDpiScale, 2070);
 			gSettings.ebDpiScale = env->addEditBox(WStr(gGameConfig->dpi_scale * 100), GetCurrentRectWithXOffset(95, 150), true, sPanel, EDITBOX_NUMERIC);
@@ -3548,16 +3557,29 @@ void Game::ReloadCBVsync() {
 	for(int i = 12114; i <= max; ++i)
 		gSettings.cbVSync->addItem(gDataManager->GetSysString(i).data());
 }
+void Game::ReloadCBAlternateArts() {
+	if(!gSettings.cbAlternateArts)
+		return;
+	gSettings.cbAlternateArts->clear();
+	gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1213).data());
+	gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1214).data());
+}
 void Game::ReloadElementsStrings() {
 	ShowCardInfo(showingcard, true);
 
 	for(auto& elem : defaultStrings) {
 		elem.first->setText(gDataManager->GetSysString(elem.second).data());
 	}
+	irr::u32 prev = 0;
+	if(gSettings.cbAlternateArts) {
+		prev = gSettings.cbAlternateArts->getSelected();
+		ReloadCBAlternateArts();
+		gSettings.cbAlternateArts->setSelected(prev);
+	}
 
 	size_t nullLFlist = gdeckManager->_lfList.size() - 1;
 	gdeckManager->_lfList[nullLFlist].listName = gDataManager->GetSysString(1442).data();
-	auto prev = cbDBLFList->getSelected();
+	prev = cbDBLFList->getSelected();
 	cbDBLFList->removeItem(static_cast<irr::u32>(nullLFlist));
 	cbDBLFList->addItem(gdeckManager->_lfList[nullLFlist].listName.data(), gdeckManager->_lfList[nullLFlist].hash);
 	cbDBLFList->setSelected(prev);

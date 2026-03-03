@@ -595,6 +595,7 @@ public:
 	void ReloadCBCurrentSkin();
 	void ReloadCBCoreLogOutput();
 	void ReloadCBVsync();
+	void ReloadCBAlternateArts();
 	void ReloadElementsStrings();
 
 	void OnResize();

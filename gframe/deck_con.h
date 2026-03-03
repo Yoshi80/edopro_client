@@ -106,6 +106,7 @@ private:
 	DECLARE_WITH_CACHE(uint32_t, filter_scl)
 	DECLARE_WITH_CACHE(uint32_t, filter_marks)
 	DECLARE_WITH_CACHE(limitation_search_filters, filter_lm)
+	uint32_t prev_deck_editor_alternate_arts;
 #undef DECLARE_WITH_CACHE
 
 	irr::core::vector2di mouse_pos;

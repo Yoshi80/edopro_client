@@ -64,6 +64,8 @@ struct SettingsWindow {
 	irr::gui::IGUIComboBox* cbCurrentLocale;
 	irr::gui::IGUIStaticText* stDpiScale;
 	irr::gui::IGUIEditBox* ebDpiScale;
+	irr::gui::IGUIStaticText* stAlternateArts;
+	irr::gui::IGUIComboBox* cbAlternateArts;
 	irr::gui::IGUIButton* btnRestart;
 	irr::gui::IGUICheckBox* chkUpdates;
 	irr::gui::IGUICheckBox* chkFilterBot;

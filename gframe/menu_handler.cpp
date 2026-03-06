@@ -19,6 +19,7 @@
 #include <IGUICheckBox.h>
 #include <IGUIComboBox.h>
 #include <IGUIContextMenu.h>
+#include <IGUIImage.h>
 #include <IGUIEditBox.h>
 #include <IGUIScrollBar.h>
 #include <IGUIStaticText.h>
@@ -545,6 +546,44 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				}
 				mainGame->HideElement(mainGame->wMainMenu);
 				mainGame->deckBuilder.Initialize();
+				break;
+			}
+			case BUTTON_PREV_ART:
+			case BUTTON_NEXT_ART: {
+				if(!mainGame->showingcard)
+					break;
+				const CardDataC* cd = gDataManager->GetCardData(mainGame->showingcard);
+				if(!cd)
+					break;
+				uint32_t base_code = cd->alias ? cd->alias : cd->code;
+				std::vector<uint32_t> artworks;
+				for(auto const& [code, card] : gDataManager->cards) {
+					if(code == base_code || card._data.alias == base_code) {
+						if(card._data.code == base_code || card._data.IsAlternateArt())
+							artworks.push_back(code);
+					}
+				}
+				if (artworks.size() <= 1)
+					break;
+				std::sort(artworks.begin(), artworks.end());
+				auto it = std::find(artworks.begin(), artworks.end(), mainGame->showingcard);
+				if (it == artworks.end())
+					break;
+				if(id == BUTTON_NEXT_ART) {
+					if(++it == artworks.end()) it = artworks.begin();
+				} else {
+					if(it == artworks.begin()) it = artworks.end();
+					--it;
+				}
+				uint32_t next = *it;
+				if(next && next != mainGame->showingcard) {
+					mainGame->showingcard = next;
+					if(mainGame->is_building) {
+						mainGame->deckBuilder.current_code = next;
+					}
+					mainGame->ShowCardInfo(next, true);
+					mainGame->wInfos->setVisible(true);
+				}
 				break;
 			}
 			case BUTTON_MSG_OK: {

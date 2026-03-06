@@ -73,16 +73,13 @@ struct CardDataC {
 
 	static constexpr auto CARD_ARTWORK_VERSIONS_OFFSET = 10;
 
+	bool IsAlternateArt() const;
+
 	bool IsInArtworkOffsetRange() const {
-		return IsInArtworkOffsetRange(this);
+		return IsAlternateArt();
 	}
 
-	template<typename T>
-	static bool IsInArtworkOffsetRange(const T* pcard) {
-		if(pcard->alias == 0)
-			return false;
-		return (pcard->alias - pcard->code < CARD_ARTWORK_VERSIONS_OFFSET || pcard->code - pcard->alias < CARD_ARTWORK_VERSIONS_OFFSET);
-	}
+	static bool IsSameFormatGroup(uint32_t ot1, uint32_t ot2);
 
 	uint32_t getRealCode() const {
 		// dummy entries have a code of 0 with the alias corresponding to the actual code

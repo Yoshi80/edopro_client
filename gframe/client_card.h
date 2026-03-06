@@ -82,6 +82,10 @@ public:
 
 	void UpdateDrawCoordinates(bool setTrans = false);
 	void SetCode(uint32_t new_code);
+	bool IsInArtworkOffsetRange() const {
+		return IsAlternateArt();
+	}
+	bool IsAlternateArt() const;
 	void UpdateInfo(const CoreUtils::Query& query);
 	void ClearTarget();
 	static bool client_card_sort(ClientCard* c1, ClientCard* c2);

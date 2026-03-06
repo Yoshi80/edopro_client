@@ -139,6 +139,8 @@ struct info_panel_elements {
 	irr::gui::IGUIStaticText* stSetName;
 	irr::gui::IGUIStaticText* stPasscodeScope;
 	irr::gui::IGUIStaticText* stText;
+	irr::gui::IGUIButton* btnPrevArt;
+	irr::gui::IGUIButton* btnNextArt;
 
 	irr::gui::IGUITab* tabLog;
 	irr::gui::IGUIListBox* lstLog;

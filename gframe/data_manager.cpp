@@ -575,9 +575,7 @@ inline bool check_codes(const CardDataC* p1, const CardDataC* p2) {
 	if(p2->alias == p1->code)
 		return true;
 	if(p1->IsInArtworkOffsetRange() && p2->IsInArtworkOffsetRange() && p1->alias == p2->alias) {
-		auto inc1 = (p1->code < p1->alias) * 2 * CardDataC::CARD_ARTWORK_VERSIONS_OFFSET;
-		auto inc2 = (p2->code < p1->alias) * 2 * CardDataC::CARD_ARTWORK_VERSIONS_OFFSET;
-		return p1->code + inc1 < p2->code + inc2;
+		return p1->code < p2->code;
 	}
 	return p1->code < p2->code;
 }
@@ -659,6 +657,27 @@ bool DataManager::deck_sort_name(const CardDataC* p1, const CardDataC* p2) {
 	if(res != 0)
 		return res < 0;
 	return check_codes(p1, p2);
+}
+
+bool CardDataC::IsSameFormatGroup(uint32_t ot1, uint32_t ot2) {
+	auto GetGroupOT = [](uint32_t ot) {
+		if (ot & SCOPE_RUSH) return (uint32_t)SCOPE_RUSH;
+		if (ot & SCOPE_SPEED) return (uint32_t)SCOPE_SPEED;
+		if (ot & (SCOPE_OCG | SCOPE_TCG | SCOPE_PRERELEASE)) return (uint32_t)SCOPE_OCG_TCG;
+		return ot;
+	};
+	return GetGroupOT(ot1) == GetGroupOT(ot2);
+}
+
+bool CardDataC::IsAlternateArt() const {
+	if(alias == 0)
+		return false;
+	auto alias_card = gDataManager->GetCardData(alias);
+	if(!alias_card)
+		return false;
+	if(gDataManager->GetName(code) != gDataManager->GetName(alias))
+		return false;
+	return IsSameFormatGroup(ot, alias_card->ot);
 }
 
 }

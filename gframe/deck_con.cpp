@@ -331,6 +331,60 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				Terminate();
 				break;
 			}
+			case BUTTON_PREV_ART:
+			case BUTTON_NEXT_ART: {
+				if(!mainGame->showingcard)
+					break;
+				const CardDataC* cd = gDataManager->GetCardData(mainGame->showingcard);
+				if(!cd)
+					break;
+				uint32_t base_code = cd->alias ? cd->alias : cd->code;
+				std::vector<uint32_t> artworks;
+				for(auto const& [code, card] : gDataManager->cards) {
+					if(code == base_code || card._data.alias == base_code) {
+						if(card._data.code == base_code || card._data.IsAlternateArt())
+							artworks.push_back(code);
+					}
+				}
+				if (artworks.size() <= 1)
+					break;
+				std::sort(artworks.begin(), artworks.end());
+				auto it = std::find(artworks.begin(), artworks.end(), mainGame->showingcard);
+				if (it == artworks.end())
+					break;
+				if(id == BUTTON_NEXT_ART) {
+					if(++it == artworks.end()) it = artworks.begin();
+				} else {
+					if(it == artworks.begin()) it = artworks.end();
+					--it;
+				}
+				uint32_t next = *it;
+				if(next && next != mainGame->showingcard) {
+					mainGame->showingcard = next;
+					current_code = next;
+					const CardDataC* next_cd = gDataManager->GetCardData(next);
+					// If we are looking at a card in the deck, update it
+					if(hovered_pos >= 1 && hovered_pos <= 3 && hovered_seq != -1) {
+						Deck::Vector* v = nullptr;
+						if(hovered_pos == 1) v = &current_deck.main;
+						else if(hovered_pos == 2) v = &current_deck.extra;
+						else if(hovered_pos == 3) v = &current_deck.side;
+						if(v && (size_t)hovered_seq < v->size()) {
+							(*v)[hovered_seq] = next_cd;
+						}
+					}
+					// Update the entry in search results so the change is reflected there too
+					for(auto& rcd : results) {
+						if(rcd->code == base_code || rcd->alias == base_code) {
+							rcd = next_cd;
+						}
+					}
+					mainGame->ShowCardInfo(next, true);
+					mainGame->wInfos->setVisible(true);
+					RefreshCurrentDeck();
+				}
+				break;
+			}
 			case BUTTON_EFFECT_FILTER: {
 				mainGame->PopupElement(mainGame->wCategories);
 				break;
@@ -642,6 +696,12 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 			dragy = event.MouseInput.Y;
 			if(!hovered_code || !(dragging_pointer = gDataManager->GetCardData(hovered_code)))
 				break;
+			if(hovered_pos == 4 && current_code) {
+				auto cd = gDataManager->GetCardData(current_code);
+				if(cd && (cd->code == dragging_pointer->code || cd->alias == dragging_pointer->code || (dragging_pointer->alias && cd->code == dragging_pointer->alias))) {
+					dragging_pointer = cd;
+				}
+			}
 			if(hovered_pos == 4) {
 				if(!forceInput && !check_limit(dragging_pointer))
 					break;
@@ -696,6 +756,12 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				auto pointer = gDataManager->GetCardData(hovered_code);
 				if(!pointer)
 					break;
+				if(hovered_pos == 4 && current_code) {
+					auto cd = gDataManager->GetCardData(current_code);
+					if(cd && (cd->code == pointer->code || cd->alias == pointer->code || (pointer->alias && cd->code == pointer->alias))) {
+						pointer = cd;
+					}
+				}
 				if(hovered_pos == 1) {
 					if(push_side(pointer))
 						pop_main(hovered_seq);
@@ -721,7 +787,15 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					pop_side(hovered_seq);
 				} else {
 					auto pointer = gDataManager->GetCardData(hovered_code);
-					if(!pointer || (!gGameConfig->ignoreDeckContents && !check_limit(pointer)))
+					if(!pointer)
+						break;
+					if(hovered_pos == 4 && current_code) {
+						auto cd = gDataManager->GetCardData(current_code);
+						if(cd && (cd->code == pointer->code || cd->alias == pointer->code || (pointer->alias && cd->code == pointer->alias))) {
+							pointer = cd;
+						}
+					}
+					if(!gGameConfig->ignoreDeckContents && !check_limit(pointer))
 						break;
 					if (event.MouseInput.Shift) {
 						push_side(pointer, -1, gGameConfig->ignoreDeckContents);
@@ -1170,7 +1244,7 @@ void DeckBuilder::FilterCards(bool force_refresh) {
 	auto ip = std::unique(results.begin(), results.end());
 	results.resize(std::distance(results.begin(), ip));
 
-	if (gGameConfig->deck_editor_alternate_arts == 1) {
+	if (gGameConfig->deck_editor_alternate_arts != 0) {
 		std::vector<const CardDataC*> filtered_results;
 		std::set<std::pair<epro::wstringview, uint32_t>> seen;
 		for (const auto* pcard : results) {
@@ -1200,6 +1274,8 @@ void DeckBuilder::FilterCards(bool force_refresh) {
 }
 bool DeckBuilder::CheckCardProperties(const CardDataM& data) {
 	if(data._data.type & TYPE_TOKEN || data._data.ot & SCOPE_HIDDEN || ((data._data.ot & SCOPE_OFFICIAL) != data._data.ot && (!mainGame->chkAnime->isChecked() && !filterList->whitelist)))
+		return false;
+	if(gGameConfig->deck_editor_alternate_arts == 0 && data._data.IsAlternateArt())
 		return false;
 	switch(filter_type) {
 	case 1: {

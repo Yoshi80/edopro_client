@@ -312,6 +312,10 @@ void Game::Initialize() {
 	imgCard->setImage(imageManager.tCover[0]);
 	imgCard->setScaleImage(true);
 	imgCard->setUseAlphaChannel(true);
+	btnPrevArt = AlignElementWithParent(env->addButton(Scale(215, 212, 240, 237), 0, BUTTON_PREV_ART, L"<"));
+	btnPrevArt->setVisible(false);
+	btnNextArt = AlignElementWithParent(env->addButton(Scale(250, 212, 275, 237), 0, BUTTON_NEXT_ART, L">"));
+	btnNextArt->setVisible(false);
 	//phase
 	wPhase = env->addStaticText(L"", Scale(480, 310, 855, 330));
 	wPhase->setVisible(false);
@@ -585,11 +589,11 @@ void Game::Initialize() {
 	btnSideReload = AlignElementWithParent(env->addButton(Scale(440, 100, 500, 130), nullptr, BUTTON_SIDE_RELOAD, gDataManager->GetSysString(1309).data()));
 	defaultStrings.emplace_back(btnSideReload, 1309);
 	btnSideReload->setVisible(false);
-	btnHandTest = AlignElementWithParent(env->addButton(Scale(205, 90, 295, 130), nullptr, BUTTON_HAND_TEST, gDataManager->GetSysString(1297).data()));
+	btnHandTest = AlignElementWithParent(env->addButton(Scale(205, 70, 295, 110), nullptr, BUTTON_HAND_TEST, gDataManager->GetSysString(1297).data()));
 	defaultStrings.emplace_back(btnHandTest, 1297);
 	btnHandTest->setVisible(false);
 
-	btnHandTestSettings = AlignElementWithParent(env->addButton(Scale(205, 140, 295, 180), 0, BUTTON_HAND_TEST_SETTINGS, L""));
+	btnHandTestSettings = AlignElementWithParent(env->addButton(Scale(205, 120, 295, 160), 0, BUTTON_HAND_TEST_SETTINGS, L""));
 	btnHandTestSettings->setVisible(false);
 
 	stHandTestSettings = AlignElementWithParent(irr::gui::CGUICustomText::addCustomText(gDataManager->GetSysString(1375).data(), false, env, btnHandTestSettings, -1, Scale(0, 0, 90, 40)));
@@ -627,7 +631,7 @@ void Game::Initialize() {
 	defaultStrings.emplace_back(tmpptr, 1215);
 	//
 
-	btnYdkeManage = AlignElementWithParent(env->addButton(Scale(205, 190, 295, 230), 0, BUTTON_DECK_YDKE_MANAGE, gDataManager->GetSysString(2083).data()));
+	btnYdkeManage = AlignElementWithParent(env->addButton(Scale(205, 170, 295, 210), 0, BUTTON_DECK_YDKE_MANAGE, gDataManager->GetSysString(2083).data()));
 	defaultStrings.emplace_back(btnYdkeManage, 2083);
 	btnYdkeManage->setVisible(false);
 	btnYdkeManage->setEnabled(true);
@@ -873,7 +877,7 @@ void Game::Initialize() {
 	defaultStrings.emplace_back(btnShuffle, 1307);
 	btnShuffle->setVisible(false);
 	//cancel or finish
-	btnCancelOrFinish = AlignElementWithParent(env->addButton(Scale(205, 230, 295, 265), 0, BUTTON_CANCEL_OR_FINISH, gDataManager->GetSysString(1295).data()));
+	btnCancelOrFinish = env->addButton(Scale(205, 267, 295, 302), 0, BUTTON_CANCEL_OR_FINISH, gDataManager->GetSysString(1295).data());
 	defaultStrings.emplace_back(btnCancelOrFinish, 1295);
 	btnCancelOrFinish->setVisible(false);
 	//leave/surrender/exit
@@ -1679,6 +1683,7 @@ void Game::PopulateSettingsWindow() {
 			gSettings.cbAlternateArts = AddComboBox(env, GetCurrentRectWithXOffset(125, 200), sPanel, COMBOBOX_ALTERNATE_ARTS);
 			gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1213).data());
 			gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1214).data());
+			gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(12127).data());
 			gSettings.cbAlternateArts->setSelected(gGameConfig->deck_editor_alternate_arts);
 			IncrementXorY();
 		}
@@ -2865,61 +2870,30 @@ void Game::ShowCardInfo(uint32_t code, bool resize, imgType type) {
 		cardimagetextureloading = true;
 	imgCard->setImage(img);
 	showingcard = code;
+
+	bool has_alt = false;
+	if(cd) {
+		uint32_t alias = cd->alias ? cd->alias : cd->code;
+		for(uint32_t i = 0; i < CardDataC::CARD_ARTWORK_VERSIONS_OFFSET; ++i) {
+			uint32_t alt_code = alias + i;
+			if(alt_code != cd->code && gDataManager->GetCardData(alt_code)) {
+				has_alt = true;
+				break;
+			}
+		}
+	}
+	if(gGameConfig->deck_editor_alternate_arts == 2 && is_building && has_alt) {
+		btnPrevArt->setVisible(true);
+		btnNextArt->setVisible(true);
+		env->getRootGUIElement()->bringToFront(btnPrevArt);
+		env->getRootGUIElement()->bringToFront(btnNextArt);
+	} else {
+		btnPrevArt->setVisible(false);
+		btnNextArt->setVisible(false);
+	}
+
 	if(only_texture)
 		return;
-	auto tmp_code = code;
-	if(cd->IsInArtworkOffsetRange())
-		tmp_code = cd->alias;
-	stName->setText(gDataManager->GetName(tmp_code).data());
-	stPasscodeScope->setText(epro::format(L"[{:08}] {}", tmp_code, gDataManager->FormatScope(cd->ot)).data());
-	stSetName->setText(L"");
-	auto setcodes = cd->setcodes;
-	if (cd->alias) {
-		auto data = gDataManager->GetCardData(cd->alias);
-		if(data)
-			setcodes = data->setcodes;
-	}
-	if (setcodes.size()) {
-		stSetName->setText(epro::format(L"{}{}", gDataManager->GetSysString(1329), gDataManager->FormatSetName(setcodes)).data());
-	}
-	if(cd->type & TYPE_MONSTER) {
-		stInfo->setText(epro::format(L"[{}] {} {}", gDataManager->FormatType(cd->type), gDataManager->FormatAttribute(cd->attribute), gDataManager->FormatRace(cd->race)).data());
-		std::wstring text;
-		if(cd->type & TYPE_LINK){
-			if(cd->attack < 0)
-				text.append(epro::format(L"?/LINK {}	  ", cd->level));
-			else
-				text.append(epro::format(L"{}/LINK {}   ", cd->attack, cd->level));
-			text.append(gDataManager->FormatLinkMarker(cd->link_marker));
-		} else {
-			text.append(epro::format(L"[{}{}] ", (cd->type & TYPE_XYZ) ? L"\u2606" : L"\u2605", cd->level));
-			if (cd->attack < 0 && cd->defense < 0)
-				text.append(L"?/?");
-			else if (cd->attack < 0)
-				text.append(epro::format(L"?/{}", cd->defense));
-			else if (cd->defense < 0)
-				text.append(epro::format(L"{}/?", cd->attack));
-			else
-				text.append(epro::format(L"{}/{}", cd->attack, cd->defense));
-		}
-		if(cd->type & TYPE_PENDULUM) {
-			text.append(epro::format(L"   {}/{}", cd->lscale, cd->rscale));
-		}
-		stDataInfo->setText(text.data());
-	} else {
-		if(cd->type & TYPE_SKILL) { // TYPE_SKILL created by hints
-			// Hack: Race encodes the character for now
-			stInfo->setText(epro::format(L"[{}|{}]", gDataManager->FormatRace(cd->race, true), gDataManager->FormatType(cd->type)).data());
-		} else {
-			stInfo->setText(epro::format(L"[{}]", gDataManager->FormatType(cd->type)).data());
-		}
-		if(cd->type & TYPE_LINK) {
-			stDataInfo->setText(epro::format(L"LINK {}   {}", cd->level, gDataManager->FormatLinkMarker(cd->link_marker)).data());
-		} else
-			stDataInfo->setText(L"");
-	}
-	RefreshCardInfoTextPositions();
-	stText->setText(gDataManager->GetText(code).data());
 }
 void Game::RefreshCardInfoTextPositions() {
 	const int xLeft = Scale(15);
@@ -3563,6 +3537,7 @@ void Game::ReloadCBAlternateArts() {
 	gSettings.cbAlternateArts->clear();
 	gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1213).data());
 	gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(1214).data());
+	gSettings.cbAlternateArts->addItem(gDataManager->GetSysString(12127).data());
 }
 void Game::ReloadElementsStrings() {
 	ShowCardInfo(showingcard, true);

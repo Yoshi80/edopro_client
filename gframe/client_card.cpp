@@ -145,4 +145,16 @@ bool ClientCard::client_card_sort(ClientCard* c1, ClientCard* c2) {
 	}
 	return c1->sequence > c2->sequence;
 }
+
+bool ClientCard::IsAlternateArt() const {
+	if(alias == 0)
+		return false;
+	auto alias_card = gDataManager->GetCardData(alias);
+	if(!alias_card)
+		return false;
+	if(gDataManager->GetName(code) != gDataManager->GetName(alias))
+		return false;
+	return CardDataC::IsSameFormatGroup(type, alias_card->ot);
+}
+
 }

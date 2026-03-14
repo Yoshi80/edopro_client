@@ -32,6 +32,7 @@ struct GameConfig
 	GameConfig();
 	bool Load(const epro::path_stringview filename);
 	bool Save(const epro::path_stringview filename);
+	std::unordered_map<uint32_t, uint32_t> selected_artworks;
 #define OPTION_ALIASED_TAGGED(type, tag, name, alias, ...) type name { __VA_ARGS__ };
 #include "game_config.inl"
 #undef OPTION_ALIASED_TAGGED

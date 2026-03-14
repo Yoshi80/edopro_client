@@ -360,6 +360,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				}
 				uint32_t next = *it;
 				if(next && next != mainGame->showingcard) {
+					gGameConfig->selected_artworks[base_code] = next;
 					mainGame->showingcard = next;
 					current_code = next;
 					const CardDataC* next_cd = gDataManager->GetCardData(next);
@@ -381,6 +382,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					}
 					mainGame->ShowCardInfo(next, true);
 					mainGame->wInfos->setVisible(true);
+					mainGame->SaveConfig();
 					RefreshCurrentDeck();
 				}
 				break;
@@ -1246,17 +1248,29 @@ void DeckBuilder::FilterCards(bool force_refresh) {
 
 	if (gGameConfig->deck_editor_alternate_arts != 0) {
 		std::vector<const CardDataC*> filtered_results;
-		std::set<std::pair<epro::wstringview, uint32_t>> seen;
+		std::set<std::pair<uint32_t, uint32_t>> seen;
 		for (const auto* pcard : results) {
 			uint32_t group_ot = pcard->ot;
 			if (group_ot & SCOPE_RUSH) group_ot = SCOPE_RUSH;
 			else if (group_ot & SCOPE_SPEED) group_ot = SCOPE_SPEED;
 			else if (group_ot & (SCOPE_OCG | SCOPE_TCG | SCOPE_PRERELEASE)) group_ot = SCOPE_OCG_TCG;
 
-			auto key = std::make_pair(gDataManager->GetName(pcard->code), group_ot);
+			uint32_t group_code = pcard->alias ? pcard->alias : pcard->code;
+			uint32_t group_type = pcard->type; // Combine type for differentiation
+			auto key = std::make_pair(group_code, group_ot ^ group_type); 
 			if (seen.find(key) == seen.end()) {
 				seen.insert(key);
-				filtered_results.push_back(pcard);
+				const auto* card_to_add = pcard;
+				if (gGameConfig->deck_editor_alternate_arts == 2) {
+					auto it = gGameConfig->selected_artworks.find(group_code);
+					if (it != gGameConfig->selected_artworks.end()) {
+						const CardDataC* artwork = gDataManager->GetCardData(it->second);
+						if (artwork) {
+							card_to_add = artwork;
+						}
+					}
+				}
+				filtered_results.push_back(card_to_add);
 			}
 		}
 		results = std::move(filtered_results);
@@ -1275,8 +1289,9 @@ void DeckBuilder::FilterCards(bool force_refresh) {
 bool DeckBuilder::CheckCardProperties(const CardDataM& data) {
 	if(data._data.type & TYPE_TOKEN || data._data.ot & SCOPE_HIDDEN || ((data._data.ot & SCOPE_OFFICIAL) != data._data.ot && (!mainGame->chkAnime->isChecked() && !filterList->whitelist)))
 		return false;
-	if(gGameConfig->deck_editor_alternate_arts == 0 && data._data.IsAlternateArt())
+	if(gGameConfig->deck_editor_alternate_arts == 1 && data._data.IsAlternateArt())
 		return false;
+
 	switch(filter_type) {
 	case 1: {
 		if(!(data._data.type & TYPE_MONSTER) || (data._data.type & filter_type2) != filter_type2)

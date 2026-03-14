@@ -577,12 +577,14 @@ bool MenuHandler::OnEvent(const irr::SEvent& event) {
 				}
 				uint32_t next = *it;
 				if(next && next != mainGame->showingcard) {
+					gGameConfig->selected_artworks[base_code] = next;
 					mainGame->showingcard = next;
 					if(mainGame->is_building) {
 						mainGame->deckBuilder.current_code = next;
 					}
 					mainGame->ShowCardInfo(next, true);
 					mainGame->wInfos->setVisible(true);
+					mainGame->SaveConfig();
 				}
 				break;
 			}

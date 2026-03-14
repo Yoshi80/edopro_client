@@ -312,9 +312,9 @@ void Game::Initialize() {
 	imgCard->setImage(imageManager.tCover[0]);
 	imgCard->setScaleImage(true);
 	imgCard->setUseAlphaChannel(true);
-	btnPrevArt = AlignElementWithParent(env->addButton(Scale(215, 212, 240, 237), 0, BUTTON_PREV_ART, L"<"));
+	btnPrevArt = AlignElementWithParent(env->addButton(Scale(220, 222, 245, 247), 0, BUTTON_PREV_ART, L"<"));
 	btnPrevArt->setVisible(false);
-	btnNextArt = AlignElementWithParent(env->addButton(Scale(250, 212, 275, 237), 0, BUTTON_NEXT_ART, L">"));
+	btnNextArt = AlignElementWithParent(env->addButton(Scale(255, 222, 280, 247), 0, BUTTON_NEXT_ART, L">"));
 	btnNextArt->setVisible(false);
 	//phase
 	wPhase = env->addStaticText(L"", Scale(480, 310, 855, 330));
@@ -853,6 +853,8 @@ void Game::Initialize() {
 	wChat->setDraggable(false);
 	wChat->setDrawTitlebar(false);
 	wChat->setVisible(false);
+	btnPrevArt->setVisible(false);
+	btnNextArt->setVisible(false);
 	ebChatInput = env->addEditBox(L"", Scale(3, 2, 710, 22), true, wChat, EDITBOX_CHAT);
 	ebChatInput->setAlignment(irr::gui::EGUIA_UPPERLEFT, irr::gui::EGUIA_LOWERRIGHT, irr::gui::EGUIA_UPPERLEFT, irr::gui::EGUIA_LOWERRIGHT);
 	//swap
@@ -2855,6 +2857,11 @@ void Game::ShowCardInfo(uint32_t code, bool resize, imgType type) {
 		return;
 	}
 	auto cd = gDataManager->GetCardData(code);
+	if(cd && gGameConfig->selected_artworks.count(cd->alias ? cd->alias : cd->code)) {
+		code = gGameConfig->selected_artworks[cd->alias ? cd->alias : cd->code];
+		cd = gDataManager->GetCardData(code);
+	}
+
 	if(!cd)
 		ClearCardInfo(0);
 	bool only_texture = !cd;
@@ -2873,14 +2880,16 @@ void Game::ShowCardInfo(uint32_t code, bool resize, imgType type) {
 
 	bool has_alt = false;
 	if(cd) {
-		uint32_t alias = cd->alias ? cd->alias : cd->code;
-		for(uint32_t i = 0; i < CardDataC::CARD_ARTWORK_VERSIONS_OFFSET; ++i) {
-			uint32_t alt_code = alias + i;
-			if(alt_code != cd->code && gDataManager->GetCardData(alt_code)) {
-				has_alt = true;
-				break;
+		uint32_t base_code = cd->alias ? cd->alias : cd->code;
+		std::vector<uint32_t> artworks;
+		for(auto const& [code, card] : gDataManager->cards) {
+			if(code == base_code || card._data.alias == base_code) {
+				if(card._data.code == base_code || card._data.IsAlternateArt())
+					artworks.push_back(code);
 			}
 		}
+		if (artworks.size() > 1)
+			has_alt = true;
 	}
 	if(gGameConfig->deck_editor_alternate_arts == 2 && is_building && has_alt) {
 		btnPrevArt->setVisible(true);
@@ -2894,6 +2903,7 @@ void Game::ShowCardInfo(uint32_t code, bool resize, imgType type) {
 
 	if(only_texture)
 		return;
+
 }
 void Game::RefreshCardInfoTextPositions() {
 	const int xLeft = Scale(15);
@@ -2912,6 +2922,8 @@ void Game::RefreshCardInfoTextPositions() {
 	stText->setRelativePosition(irr::core::recti(xLeft, offset, xRight, stText->getParent()->getAbsolutePosition().getHeight() - Scale(1)));
 }
 void Game::ClearCardInfo(int player) {
+	btnPrevArt->setVisible(false);
+	btnNextArt->setVisible(false);
 	imgCard->setImage(imageManager.tCover[player]);
 	stName->setText(L"");
 	stInfo->setText(L"");
@@ -3054,6 +3066,8 @@ void Game::CloseDuelWindow() {
 	btnCancelOrFinish->setVisible(false);
 	btnShuffle->setVisible(false);
 	wChat->setVisible(false);
+	btnPrevArt->setVisible(false);
+	btnNextArt->setVisible(false);
 	lstLog->clear();
 	logParam.clear();
 	lstHostList->clear();

@@ -1,5 +1,6 @@
 #include <IrrCompileConfig.h>
 #include <path.h>
+#include <sstream>
 #include "game_config.h"
 #include "bufferio.h"
 #include "porting.h"
@@ -264,10 +265,20 @@ bool GameConfig::Load(const epro::path_stringview filename) {
 		if (str.empty() || str.at(0) == '#') {
 			continue;
 		}
+		auto first_space = str.find(' ');
+		auto type = str.substr(0, first_space);
+		if (type == "selected_artwork") {
+			uint32_t base, selected;
+			std::stringstream ss(str.substr(first_space + 1));
+			if (ss >> base >> selected) {
+				selected_artworks[base] = selected;
+			}
+			continue;
+		}
 		pos = str.find('=');
 		if (pos == std::string::npos)
 			continue;
-		auto type = str.substr(0, pos - 1);
+		type = str.substr(0, pos - 1);
 		str.erase(0, pos + 2);
 		try {
 #define OPTION_ALIASED_TAGGED(_type, tag, name, alias, ...) if(type == #alias){name=parseOption<_type,tag>(str); continue;}
@@ -288,6 +299,10 @@ bool GameConfig::Save(const epro::path_stringview filename) {
 #define OPTION_ALIASED_TAGGED(_type, tag, name, alias, ...) conf_file << #alias " = " << serializeOption(name) << "\n";
 #include "game_config.inl"
 #undef OPTION_ALIASED_TAGGED
+	conf_file << "# Selected Artworks\n";
+	for (const auto& [base, selected] : selected_artworks) {
+		conf_file << "selected_artwork " << base << " " << selected << "\n";
+	}
 	return true;
 }
 

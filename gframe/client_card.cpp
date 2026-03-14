@@ -147,14 +147,16 @@ bool ClientCard::client_card_sort(ClientCard* c1, ClientCard* c2) {
 }
 
 bool ClientCard::IsAlternateArt() const {
-	if(alias == 0)
+	if (alias == 0)
 		return false;
-	auto alias_card = gDataManager->GetCardData(alias);
-	if(!alias_card)
+	auto alias_card_ptr = gDataManager->GetCardData(alias);
+	if (!alias_card_ptr)
 		return false;
-	if(gDataManager->GetName(code) != gDataManager->GetName(alias))
+	// Get the CardDataC for the current client card and delegate to its IsAlternateArt logic
+	auto self_cd = gDataManager->GetCardData(code);
+	if (!self_cd)
 		return false;
-	return CardDataC::IsSameFormatGroup(type, alias_card->ot);
+	return self_cd->IsAlternateArt(); // Call the actual logic
 }
 
 }

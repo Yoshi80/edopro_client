@@ -675,9 +675,13 @@ bool CardDataC::IsAlternateArt() const {
 	auto alias_card = gDataManager->GetCardData(alias);
 	if(!alias_card)
 		return false;
-	if(gDataManager->GetName(code) != gDataManager->GetName(alias))
+	if(gDataManager->GetName(code) != gDataManager->GetName(alias)) // Name check
 		return false;
-	return IsSameFormatGroup(ot, alias_card->ot);
+	if (!IsSameFormatGroup(ot, alias_card->ot)) // OT group check
+		return false;
+	if (type != alias_card->type) // Exact type match required
+		return false;
+	return true; // All conditions met
 }
 
 }

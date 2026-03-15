@@ -2904,6 +2904,59 @@ void Game::ShowCardInfo(uint32_t code, bool resize, imgType type) {
 	if(only_texture)
 		return;
 
+	auto tmp_code = code;
+	if(cd->IsInArtworkOffsetRange())
+		tmp_code = cd->alias;
+	stName->setText(gDataManager->GetName(tmp_code).data());
+	stPasscodeScope->setText(epro::format(L"[{:08}] {}", tmp_code, gDataManager->FormatScope(cd->ot)).data());
+	stSetName->setText(L"");
+	auto setcodes = cd->setcodes;
+	if (cd->alias) {
+		auto data = gDataManager->GetCardData(cd->alias);
+		if(data)
+			setcodes = data->setcodes;
+	}
+	if (setcodes.size()) {
+		stSetName->setText(epro::format(L"{}{}", gDataManager->GetSysString(1329), gDataManager->FormatSetName(setcodes)).data());
+	}
+	if(cd->type & TYPE_MONSTER) {
+		stInfo->setText(epro::format(L"[{}] {} {}", gDataManager->FormatType(cd->type), gDataManager->FormatAttribute(cd->attribute), gDataManager->FormatRace(cd->race)).data());
+		std::wstring text;
+		if(cd->type & TYPE_LINK){
+			if(cd->attack < 0)
+				text.append(epro::format(L"?/LINK {}      ", cd->level));
+			else
+				text.append(epro::format(L"{}/LINK {}   ", cd->attack, cd->level));       
+			text.append(gDataManager->FormatLinkMarker(cd->link_marker));
+		} else {
+			text.append(epro::format(L"[{}{}] ", (cd->type & TYPE_XYZ) ? L"\u2606" : L"\u2605", cd->level));
+			if (cd->attack < 0 && cd->defense < 0)
+				text.append(L"?/?");
+			else if (cd->attack < 0)
+				text.append(epro::format(L"?/{}", cd->defense));
+			else if (cd->defense < 0)
+				text.append(epro::format(L"{}/?", cd->attack));
+			else
+				text.append(epro::format(L"{}/{}", cd->attack, cd->defense));
+		}
+		if(cd->type & TYPE_PENDULUM) {
+			text.append(epro::format(L"   {}/{}", cd->lscale, cd->rscale));
+		}
+		stDataInfo->setText(text.data());
+	} else {
+		if(cd->type & TYPE_SKILL) { // TYPE_SKILL created by hints
+			// Hack: Race encodes the character for now
+			stInfo->setText(epro::format(L"[{}|{}]", gDataManager->FormatRace(cd->race, true), gDataManager->FormatType(cd->type)).data());
+		} else {
+			stInfo->setText(epro::format(L"[{}]", gDataManager->FormatType(cd->type)).data());
+		}
+		if(cd->type & TYPE_LINK) {
+			stDataInfo->setText(epro::format(L"LINK {}   {}", cd->level, gDataManager->FormatLinkMarker(cd->link_marker)).data());
+		} else
+			stDataInfo->setText(L"");
+	}
+	RefreshCardInfoTextPositions();
+	stText->setText(gDataManager->GetText(code).data());
 }
 void Game::RefreshCardInfoTextPositions() {
 	const int xLeft = Scale(15);
@@ -3559,16 +3612,15 @@ void Game::ReloadElementsStrings() {
 	for(auto& elem : defaultStrings) {
 		elem.first->setText(gDataManager->GetSysString(elem.second).data());
 	}
-	irr::u32 prev = 0;
 	if(gSettings.cbAlternateArts) {
-		prev = gSettings.cbAlternateArts->getSelected();
+		auto prev_art = gSettings.cbAlternateArts->getSelected();
 		ReloadCBAlternateArts();
-		gSettings.cbAlternateArts->setSelected(prev);
+		gSettings.cbAlternateArts->setSelected(prev_art);
 	}
 
 	size_t nullLFlist = gdeckManager->_lfList.size() - 1;
 	gdeckManager->_lfList[nullLFlist].listName = gDataManager->GetSysString(1442).data();
-	prev = cbDBLFList->getSelected();
+	auto prev = cbDBLFList->getSelected();
 	cbDBLFList->removeItem(static_cast<irr::u32>(nullLFlist));
 	cbDBLFList->addItem(gdeckManager->_lfList[nullLFlist].listName.data(), gdeckManager->_lfList[nullLFlist].hash);
 	cbDBLFList->setSelected(prev);

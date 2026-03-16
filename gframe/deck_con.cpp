@@ -338,11 +338,21 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				const CardDataC* cd = gDataManager->GetCardData(mainGame->showingcard);
 				if(!cd)
 					break;
+				bool is_rush = cd->isRush();
 				uint32_t base_code = cd->alias ? cd->alias : cd->code;
+
 				std::vector<uint32_t> artworks;
 				for(auto const& [code, card] : gDataManager->cards) {
 					if(code == base_code || card._data.alias == base_code) {
-						if(card._data.code == base_code || card._data.IsAlternateArt())
+						if(card._data.isRush() != is_rush)
+							continue;
+						
+						bool is_valid = (card._data.code == base_code || card._data.IsAlternateArt());
+						if (!is_valid && is_rush && card._data.alias == base_code) {
+							is_valid = true;
+						}
+
+						if(is_valid)
 							artworks.push_back(code);
 					}
 				}
@@ -360,7 +370,9 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				}
 				uint32_t next = *it;
 				if(next && next != mainGame->showingcard) {
-					gGameConfig->selected_artworks[base_code] = next;
+					// Use a unique key for selection based on base_code AND format to separate them
+					uint32_t selection_key = is_rush ? (base_code | 0x80000000) : base_code;
+					gGameConfig->selected_artworks[selection_key] = next;
 					mainGame->showingcard = next;
 					current_code = next;
 					const CardDataC* next_cd = gDataManager->GetCardData(next);
@@ -1262,7 +1274,10 @@ void DeckBuilder::FilterCards(bool force_refresh) {
 				seen.insert(key);
 				const auto* card_to_add = pcard;
 				if (gGameConfig->deck_editor_alternate_arts == 2) {
-					auto it = gGameConfig->selected_artworks.find(group_code);
+					uint32_t selection_key = group_code;
+					if (pcard->isRush())
+						selection_key |= 0x80000000;
+					auto it = gGameConfig->selected_artworks.find(selection_key);
 					if (it != gGameConfig->selected_artworks.end()) {
 						const CardDataC* artwork = gDataManager->GetCardData(it->second);
 						if (artwork) {

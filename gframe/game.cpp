@@ -2857,9 +2857,13 @@ void Game::ShowCardInfo(uint32_t code, bool resize, imgType type) {
 		return;
 	}
 	auto cd = gDataManager->GetCardData(code);
-	if(cd && gGameConfig->selected_artworks.count(cd->alias ? cd->alias : cd->code)) {
-		code = gGameConfig->selected_artworks[cd->alias ? cd->alias : cd->code];
-		cd = gDataManager->GetCardData(code);
+	if(cd) {
+		uint32_t base_code = cd->alias ? cd->alias : cd->code;
+		uint32_t selection_key = cd->isRush() ? (base_code | 0x80000000) : base_code;
+		if(gGameConfig->selected_artworks.count(selection_key)) {
+			code = gGameConfig->selected_artworks[selection_key];
+			cd = gDataManager->GetCardData(code);
+		}
 	}
 
 	if(!cd)

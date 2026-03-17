@@ -388,7 +388,7 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 					}
 					// Update the entry in search results so the change is reflected there too
 					for(auto& rcd : results) {
-						if(rcd->code == base_code || rcd->alias == base_code) {
+						if((rcd->code == base_code || rcd->alias == base_code) && (rcd->isRush() == is_rush)) {
 							rcd = next_cd;
 						}
 					}

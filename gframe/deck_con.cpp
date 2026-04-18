@@ -331,74 +331,6 @@ bool DeckBuilder::OnEvent(const irr::SEvent& event) {
 				Terminate();
 				break;
 			}
-			case BUTTON_PREV_ART:
-			case BUTTON_NEXT_ART: {
-				if(!mainGame->showingcard)
-					break;
-				const CardDataC* cd = gDataManager->GetCardData(mainGame->showingcard);
-				if(!cd)
-					break;
-				bool is_rush = cd->isRush();
-				uint32_t base_code = cd->alias ? cd->alias : cd->code;
-
-				std::vector<uint32_t> artworks;
-				for(auto const& [code, card] : gDataManager->cards) {
-					if(code == base_code || card._data.alias == base_code) {
-						if(card._data.isRush() != is_rush)
-							continue;
-						
-						bool is_valid = (card._data.code == base_code || card._data.IsAlternateArt());
-						if (!is_valid && is_rush && card._data.alias == base_code) {
-							is_valid = true;
-						}
-
-						if(is_valid)
-							artworks.push_back(code);
-					}
-				}
-				if (artworks.size() <= 1)
-					break;
-				std::sort(artworks.begin(), artworks.end());
-				auto it = std::find(artworks.begin(), artworks.end(), mainGame->showingcard);
-				if (it == artworks.end())
-					break;
-				if(id == BUTTON_NEXT_ART) {
-					if(++it == artworks.end()) it = artworks.begin();
-				} else {
-					if(it == artworks.begin()) it = artworks.end();
-					--it;
-				}
-				uint32_t next = *it;
-				if(next && next != mainGame->showingcard) {
-					// Use a unique key for selection based on base_code AND format to separate them
-					uint32_t selection_key = is_rush ? (base_code | 0x80000000) : base_code;
-					gGameConfig->selected_artworks[selection_key] = next;
-					mainGame->showingcard = next;
-					current_code = next;
-					const CardDataC* next_cd = gDataManager->GetCardData(next);
-					// If we are looking at a card in the deck, update it
-					if(hovered_pos >= 1 && hovered_pos <= 3 && hovered_seq != -1) {
-						Deck::Vector* v = nullptr;
-						if(hovered_pos == 1) v = &current_deck.main;
-						else if(hovered_pos == 2) v = &current_deck.extra;
-						else if(hovered_pos == 3) v = &current_deck.side;
-						if(v && (size_t)hovered_seq < v->size()) {
-							(*v)[hovered_seq] = next_cd;
-						}
-					}
-					// Update the entry in search results so the change is reflected there too
-					for(auto& rcd : results) {
-						if((rcd->code == base_code || rcd->alias == base_code) && (rcd->isRush() == is_rush)) {
-							rcd = next_cd;
-						}
-					}
-					mainGame->ShowCardInfo(next, true);
-					mainGame->wInfos->setVisible(true);
-					mainGame->SaveConfig();
-					RefreshCurrentDeck();
-				}
-				break;
-			}
 			case BUTTON_EFFECT_FILTER: {
 				mainGame->PopupElement(mainGame->wCategories);
 				break;
@@ -1272,20 +1204,7 @@ void DeckBuilder::FilterCards(bool force_refresh) {
 			auto key = std::make_pair(group_code, group_ot ^ group_type); 
 			if (seen.find(key) == seen.end()) {
 				seen.insert(key);
-				const auto* card_to_add = pcard;
-				if (gGameConfig->deck_editor_alternate_arts == 2) {
-					uint32_t selection_key = group_code;
-					if (pcard->isRush())
-						selection_key |= 0x80000000;
-					auto it = gGameConfig->selected_artworks.find(selection_key);
-					if (it != gGameConfig->selected_artworks.end()) {
-						const CardDataC* artwork = gDataManager->GetCardData(it->second);
-						if (artwork) {
-							card_to_add = artwork;
-						}
-					}
-				}
-				filtered_results.push_back(card_to_add);
+				filtered_results.push_back(pcard);
 			}
 		}
 		results = std::move(filtered_results);
